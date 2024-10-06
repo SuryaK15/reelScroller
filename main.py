@@ -5,38 +5,33 @@ import pyautogui
 
 # Load the face detector and shape predictor
 detector = dlib.get_frontal_face_detector()
-predictor_path = "shape_predictor_68_face_landmarks.dat"  # Ensure this path is correct
+predictor_path = "shape_predictor_68_face_landmarks.dat"
 predictor = dlib.shape_predictor(predictor_path)
 
-# Scroll down action
 def scroll_down():
     display_message("Scrolling Down")
-    pyautogui.scroll(-100)  # Scroll down
+    pyautogui.scroll(-100) 
 
-# Scroll up action
 def scroll_up():
     display_message("Scrolling Up")
-    pyautogui.scroll(100)  # Scroll up
+    pyautogui.scroll(100)  
 
-# Display "Still" condition
 def still():
-    display_message("Head still: No action")
+    display_message("Head still: Enjoy your Reel!")
 
-# Pause video when no face detected
 def pause_video():
     global paused
-    if not paused:  # Only pause if not already paused
+    if not paused:
         display_message("No face detected: Pausing video")
-        pyautogui.click()  # Simulate click to pause the video
-        paused = True  # Set paused state
+        pyautogui.click()
+        paused = True
 
-# Resume video when face detected
 def resume_video():
     global paused
-    if paused:  # Only resume if currently paused
+    if paused:
         display_message("Face detected: Resuming video")
-        pyautogui.click()  # Simulate click to resume the video
-        paused = False  # Reset paused state
+        pyautogui.click()
+        paused = False
 
 # Detect face and landmarks (nose y-coordinate)
 def detect_face_and_nose(gray):
@@ -63,8 +58,9 @@ def display_message(message):
     # Overlay the message on the frame using OpenCV's putText
     font = cv2.FONT_HERSHEY_SIMPLEX
     text_size = cv2.getTextSize(message, font, 0.8, 2)[0]
-    text_x = (frame.shape[1] - text_size[0]) // 2  # Center the text
-    text_y = frame.shape[0] - 50  # Place near the bottom
+    # Center the text
+    text_x = (frame.shape[1] - text_size[0]) // 2 
+    text_y = frame.shape[0] - 50
     cv2.putText(frame, message, (text_x, text_y), font, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
 
 # Display current nose Y-coordinate and baseline
@@ -74,46 +70,38 @@ def display_nose_position(nose_y, initial_nose_y):
         message = f"Nose Y Position: {nose_y} | Adjust to: {initial_nose_y} for best experience"
     else:
         message = f"Nose Y Position: {nose_y} | Restart to set baseline"
-    
     font = cv2.FONT_HERSHEY_SIMPLEX
     text_size = cv2.getTextSize(message, font, 0.6, 2)[0]
-    text_x = (frame.shape[1] - text_size[0]) // 2  # Center the text
-    text_y = 30  # Display at the top of the frame
+    text_x = (frame.shape[1] - text_size[0]) // 2 
+    text_y = 30
     cv2.putText(frame, message, (text_x, text_y), font, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
 
-# Draw a red target circle to guide the user to position their nose
 def draw_target_circle(frame, center_y, radius):
-    center_x = frame.shape[1] // 2  # Center horizontally
-    color = (0, 0, 255)  # Red circle
-    thickness = 2  # Circle line thickness
+    center_x = frame.shape[1] // 2
+    color = (0, 0, 255)
+    thickness = 2
     cv2.circle(frame, (center_x, center_y), radius, color, thickness)
 
-# Countdown to capture initial nose y-coordinate
 def countdown_to_capture(seconds):
     global frame
     for i in range(seconds, 0, -1):
-        # Show the camera frame with countdown overlay
-        display_message(f"Adjust your face... Capturing in {i} seconds")
+        display_message(f"Adjust your face - Capturing in {i} seconds")
         cv2.imshow('Image', frame)
-        cv2.waitKey(1000)  # Wait for 1 second
+        cv2.waitKey(1000)
 
-# Initialize and run the main loop
 def run_main_loop():
     global frame, paused
-    paused = False  # Track whether the video is paused or not
-
+    paused = False
     # Open Camera
     camera = cv2.VideoCapture(0)
-
     # Gesture detection variables
     initial_nose_y = None  # Baseline for nose position (y-coordinate)
     movement_threshold = 13  # Movement threshold for scrolling
-    still_threshold = (-movement_threshold, movement_threshold)  # Threshold for stillness
-    cooldown_period = 1.5  # Cooldown period in seconds (e.g., 1 second)
-    last_scroll_time = time.time()  # Track the last time a scroll action happened
-    face_absent_time = None  # Track when the face is not detected
-
-    # Initialization countdown (5 seconds)
+    still_threshold = (-movement_threshold, movement_threshold)  # Threshold Range
+    cooldown_period = 1.5 
+    last_scroll_time = time.time()
+    face_absent_time = None
+    # Initialization countdown
     countdown_completed = False
     countdown_time = 4
 
@@ -131,25 +119,22 @@ def run_main_loop():
             if nose_y is not None:
                 # Show the countdown only if the face is detected
                 countdown_to_capture(countdown_time)
-                countdown_completed = True  # Complete the countdown
+                countdown_completed = True
 
         if nose_y is not None:
             if initial_nose_y is None and countdown_completed:
                 # Set the first detected nose position as the baseline (0, 0)
                 initial_nose_y = nose_y
                 display_message("Baseline set for nose position.")
-
-            # Show current nose y-coordinate and baseline to guide the user
             display_nose_position(nose_y, initial_nose_y)
 
-            # Draw the target circle to guide the user to align their nose
             if initial_nose_y is not None:
                 draw_target_circle(frame, initial_nose_y, movement_threshold)
 
             # Reset face_absent_time because face is detected
             face_absent_time = None
 
-            # Calculate the difference in y position from the baseline
+            # Difference
             y_movement = nose_y - initial_nose_y
 
             # Check the time since the last scroll action
@@ -160,31 +145,28 @@ def run_main_loop():
             if y_movement > movement_threshold and time_since_last_scroll > cooldown_period:
                 scroll_up()  # Perform scroll up
                 last_scroll_time = current_time  # Reset the last scroll time
+
             elif y_movement < -movement_threshold and time_since_last_scroll > cooldown_period:
                 scroll_down()  # Perform scroll down
                 last_scroll_time = current_time  # Reset the last scroll time
+
             elif still_threshold[0] <= y_movement <= still_threshold[1]:
-                still()  # Display "still" message
-
-            # Draw face landmarks
+                still()
             draw_landmarks(frame, face, landmarks)
-
-            # Resume video if paused and face detected
             resume_video()
 
         else:
-            # Always draw the target circle, even if face is not detected
             if initial_nose_y is not None:
                 draw_target_circle(frame, initial_nose_y, movement_threshold)
             else:
-                draw_target_circle(frame, frame.shape[0] // 2, movement_threshold)  # Default center if no baseline
+                draw_target_circle(frame, frame.shape[0] // 2, movement_threshold)
 
             if face_absent_time is None:
                 # Start the timer when face is not detected
                 face_absent_time = time.time()
-            elif time.time() - face_absent_time > 5:  # Wait for 2 seconds before pausing
-                pause_video()  # Pause the video
-                face_absent_time = None  # Reset after pausing
+            elif time.time() - face_absent_time > 5:  # Wait for 5 seconds before pausing
+                pause_video()
+                face_absent_time = None
 
         # Display reset message option if user wants to reset
         if initial_nose_y is not None:
@@ -200,13 +182,11 @@ def run_main_loop():
             break
         elif key == ord('r'):  # Reset the script
             display_message("Script reset. Please adjust your face again.")
-            initial_nose_y = None  # Reset initial nose position
-            countdown_completed = False  # Reset countdown flag
+            initial_nose_y = None
+            countdown_completed = False
 
-    # Release resources
     camera.release()
     cv2.destroyAllWindows()
 
-# Run the main function
 if __name__ == "__main__":
     run_main_loop()
